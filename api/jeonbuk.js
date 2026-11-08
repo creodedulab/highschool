@@ -8,9 +8,9 @@ export default async function handler(req, res) {
   if (!key) return res.status(503).json({ error: '학교알리미 연결이 설정되지 않았습니다.' });
   // 아직 검증된 최신 공시연도만 사용한다. 연도 자동 증가는 미공시 자료를 최신으로 오인할 수 있다.
   const year = 2026;
-  async function load(type, depth) {
+  async function load(type, depth, disclosureYear = year) {
     const url = new URL('https://www.schoolinfo.go.kr/openApi.do');
-    url.search = new URLSearchParams({apiKey:key,apiType:type,sidoCode:'52',sggCode:district,schulKndCode:'04',...(type!=='0'?{pbanYr:String(year)}:{}),...(depth?{depthNo:depth}:{})});
+    url.search = new URLSearchParams({apiKey:key,apiType:type,sidoCode:'52',sggCode:district,schulKndCode:'04',...(type!=='0'?{pbanYr:String(disclosureYear)}:{}),...(depth?{depthNo:depth}:{})});
     const response = await fetch(url, { signal: AbortSignal.timeout(12000), redirect:'error' });
     if (!response.ok) throw new Error('upstream');
     const data = await response.json();
@@ -26,6 +26,28 @@ export default async function handler(req, res) {
     const afterByCode = new Map(afterschool.map(x=>[x.SCHUL_CODE,x]));
     const clubsByCode = new Map(clubs.map(x=>[x.SCHUL_CODE,x]));
     const featuresByCode = new Map(features.map(x=>[x.SCHUL_CODE,x]));
+    // API가 제공하는 최근 3개 공시연도를 학교별로 살펴보고 가장 최근 유효한 행을 선택한다.
+    const currentYear = Number(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric'}).format(new Date()));
+    const admissionsByCode = new Map();
+    let admissionsError = false;
+    const admissionYears = [currentYear,currentYear-1,currentYear-2];
+    const admissionResults = await Promise.allSettled(admissionYears.map(y=>load('51',null,y)));
+    for (let i=0;i<admissionYears.length;i++) {
+      const y=admissionYears[i], result=admissionResults[i];
+      if (result.status==='fulfilled') {
+        const data = result.value;
+        for (const r of data) {
+          if (admissionsByCode.has(r.SCHUL_CODE) || r.PBAN_EXCP_YN !== 'N') continue;
+          if (![r.ALL_SUM,r.MAN_SUM,r.WOMAN_SUM].every(v=>Number.isInteger(v)&&v>=0) || r.MAN_SUM+r.WOMAN_SUM!==r.ALL_SUM) continue;
+          const sumPair=(a,b)=>[a,b].every(v=>Number.isInteger(v)&&v>=0)?a+b:null;
+          admissionsByCode.set(r.SCHUL_CODE,{year:y,total:r.ALL_SUM,male:r.MAN_SUM,female:r.WOMAN_SUM,
+            recentGraduates:sumPair(r.PRTI_GRDTN_BOYST_FGR,r.PRTI_GRDTN_FES_FGR),
+            previousGraduates:sumPair(r.BFR_YR_GRDTN_BOYST_FGR,r.BFR_YR_GRDTN_FES_FGR),
+            equivalency:sumPair(r.SQE_COMPT_BOYST_FGR,r.SQE_COMPT_FES_FGR),
+            other:sumPair(r.ETC_BOYST_FGR,r.ETC_FES_FGR)});
+        }
+      } else { admissionsError = true; }
+    }
     const schools = basic.map(s=>{
       const m=byCode.get(s.SCHUL_CODE);
       const number = value => { const match=/^(\d+)(?:\((\d+)\))?$/.exec(String(value??'').trim()); return match ? {value:Number(match[1]),raw:match[0]} : null; };
@@ -41,10 +63,10 @@ export default async function handler(req, res) {
       const specialPrograms=feature?.PBAN_EXCP_YN==='N'?{classroom:flag(feature.CURR_CCCLA_SYST_YN),autonomousSchool:flag(feature.SLCTL_SCHUL_YN),levelBased:flag(feature.LEVEL_ACCTO_MVMN_ITRT_OPRTN_YN)}:null;
       const library={stockPerStudent:stock?.PBAN_EXCP_YN==='N'&&valid(stock.RATIO)?stock.RATIO:null,loansPerStudent:use?.PBAN_EXCP_YN==='N'&&valid(use.DATA1)?use.DATA1:null};
       const afterSchool=after?.PBAN_EXCP_YN==='N'&&[after.ASL_CURR_PGM_FGR,after.ASL_CURR_REG_STDNT_FGR,after.ASL_SPABL_APTD_PGM_FGR,after.ASL_SPABL_APTD_REG_STDNT_FGR].every(valid)?{currPrograms:after.ASL_CURR_PGM_FGR,currEnrollments:after.ASL_CURR_REG_STDNT_FGR,aptitudePrograms:after.ASL_SPABL_APTD_PGM_FGR,aptitudeEnrollments:after.ASL_SPABL_APTD_REG_STDNT_FGR}:null;
-      return { code:s.SCHUL_CODE, uuid:s.SHL_IDF_CD, schoolKind:s.HS_KND_SC_NM, name:s.SCHUL_NM, address:s.SCHUL_RDNMA, founder:s.FOND_SC_CODE, gender:s.COEDU_SC_CODE, students:m?number(m.COL_FGR_SUM):null, classes:m?number(m.COL_SUM):null, gradeClasses, sex,library,afterSchool,clubCounts,specialPrograms };
+      return { code:s.SCHUL_CODE, uuid:s.SHL_IDF_CD, schoolKind:s.HS_KND_SC_NM, name:s.SCHUL_NM, address:s.SCHUL_RDNMA, founder:s.FOND_SC_CODE, gender:s.COEDU_SC_CODE, students:m?number(m.COL_FGR_SUM):null, classes:m?number(m.COL_SUM):null, gradeClasses, sex,library,afterSchool,clubCounts,specialPrograms,admissionStats:admissionsByCode.get(s.SCHUL_CODE)||null };
     });
     res.setHeader('Cache-Control','public, s-maxage=3600, stale-while-revalidate=300');
-    return res.status(200).json({schools,year,queriedAt:new Date().toISOString()});
+    return res.status(200).json({schools,year,admissionsError,queriedAt:new Date().toISOString()});
   } catch { return res.status(502).json({error:'학교알리미 정보를 불러오지 못했습니다.'}); }
 }
 
