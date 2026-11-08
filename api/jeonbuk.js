@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   const year = 2026;
   async function load(type) {
     const url = new URL('https://www.schoolinfo.go.kr/openApi.do');
-    url.search = new URLSearchParams({apiKey:key,apiType:type,sidoCode:'52',sggCode:district,schulKndCode:'04',...(type==='62'?{pbanYr:String(year)}:{})});
+    url.search = new URLSearchParams({apiKey:key,apiType:type,sidoCode:'52',sggCode:district,schulKndCode:'04',...(type!=='0'?{pbanYr:String(year)}:{})});
     const response = await fetch(url, { signal: AbortSignal.timeout(12000), redirect:'error' });
     if (!response.ok) throw new Error('upstream');
     const data = await response.json();
@@ -18,12 +18,15 @@ export default async function handler(req, res) {
     return data.list;
   }
   try {
-    const [basic, metrics] = await Promise.all([load('0'),load('62')]);
+    const [basic, metrics, gender] = await Promise.all([load('0'),load('62'),load('63').catch(()=>[])]);
     const byCode = new Map(metrics.map(x=>[x.SCHUL_CODE,x]));
+    const genderByCode = new Map(gender.map(x=>[x.SCHUL_CODE,x]));
     const schools = basic.map(s=>{
       const m=byCode.get(s.SCHUL_CODE);
       const number = value => { const match=/^(\d+)(?:\((\d+)\))?$/.exec(String(value??'').trim()); return match ? {value:Number(match[1]),raw:match[0]} : null; };
-      return { code:s.SCHUL_CODE, name:s.SCHUL_NM, address:s.SCHUL_RDNMA, founder:s.FOND_SC_CODE, gender:s.COEDU_SC_CODE, students:m?number(m.COL_FGR_SUM):null, classes:m?number(m.COL_SUM):null };
+      const g=genderByCode.get(s.SCHUL_CODE), male=g?.COL_MSUM, female=g?.COL_WSUM;
+      const sex=g?.PBAN_EXCP_YN==='N' && Number.isInteger(male) && male>=0 && Number.isInteger(female) && female>=0 && male+female===g.SUM ? {male,female} : null;
+      return { code:s.SCHUL_CODE, name:s.SCHUL_NM, address:s.SCHUL_RDNMA, founder:s.FOND_SC_CODE, gender:s.COEDU_SC_CODE, students:m?number(m.COL_FGR_SUM):null, classes:m?number(m.COL_SUM):null, sex };
     });
     res.setHeader('Cache-Control','public, s-maxage=3600, stale-while-revalidate=300');
     return res.status(200).json({schools,year,queriedAt:new Date().toISOString()});
