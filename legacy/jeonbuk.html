@@ -54,7 +54,7 @@
     </nav>
   </aside>
   <div class="main-shell">
-    <header class="topbar"><div style="display:flex;align-items:center;gap:12px"><button type="button" class="mobile-menu" id="mobile-menu" aria-label="메뉴 열기">☰</button><div><div class="eyebrow">JEONBUK EDUCATION DATA</div><div style="font-size:11px;color:#7a90a9">전북특별자치도 고등학교 통합 탐색 플랫폼</div></div></div><div class="top-right"><span class="top-pill">자료 제작 2026.11.08</span></div></header>
+    <header class="topbar"><div style="display:flex;align-items:center;gap:12px"><button type="button" class="mobile-menu" id="mobile-menu" aria-label="메뉴 열기">☰</button><div><div class="eyebrow">JEONBUK EDUCATION DATA</div><div style="font-size:11px;color:#7a90a9">전북특별자치도 고등학교 통합 탐색 플랫폼</div></div></div><div class="top-right"><span id="live-status" class="top-pill" role="status">저장된 자료 표시</span><span class="top-pill">자료 제작 2026.11.08</span></div></header>
     <main class="content" id="main-content" tabindex="-1" aria-live="polite"></main>
   </div>
 </div>
@@ -169,6 +169,20 @@ document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.tar
 document.getElementById('mobile-menu').addEventListener('click',()=>{document.getElementById('aside').classList.add('show');document.getElementById('menu-overlay').classList.add('show');});
 document.getElementById('menu-overlay').addEventListener('click',()=>{document.getElementById('aside').classList.remove('show');document.getElementById('menu-overlay').classList.remove('show');});
 render();
+async function refreshOnline(){
+ if(location.protocol==='file:')return;
+ const status=document.getElementById('live-status');status.textContent='학교알리미 확인 중';
+ try{
+  const codes=[...new Set(all.map(s=>s.schoolinfo_district).filter(Boolean))];
+  const mapping={};for(const s of all)if(s.schoolinfo_code)mapping[s.schoolinfo_code]=s;
+  const districts=await fetch('../data/districts.json').then(r=>{if(!r.ok)throw Error();return r.json()});
+  const selected=districts.filter(d=>d.sido==='52'&&codes.includes(d.district));let failed=0,updated=0;
+  for(const d of selected){try{const response=await fetch('/api/jeonbuk?district='+encodeURIComponent(d.code));if(!response.ok)throw Error();const result=await response.json();for(const x of result.schools){const s=mapping[x.code];if(!s||s.operational_status==='PAUSED')continue;s.address=x.address||s.address;s.founder=({'국립':'NATIONAL','공립':'PUBLIC','사립':'PRIVATE'})[x.founder]||s.founder;s.gender=({'남':'BOYS','녀':'GIRLS','여':'GIRLS','남녀공학':'COED'})[x.gender]||s.gender;for(const [v,k,unit] of [[x.students,'STUDENT_COUNT','명'],[x.classes,'CLASS_COUNT','학급']])if(v)s.metrics[k]={value:v.value,year:result.year,unit,status:'CONFIRMED',source:'SCHOOLINFO-62-2026',note:'학교알리미 원문 '+v.raw+' · 괄호 안은 특수학급·순회학급 수'};updated++}}catch{failed++}}
+  status.textContent=failed?('일부 갱신 실패 · 저장자료 포함'):('학교알리미 확인 '+updated+'개교');
+  if(!document.querySelector('input:focus'))render();
+ }catch{status.textContent='갱신 실패 · 저장자료 표시'}
+}
+refreshOnline();
 })();
 </script>
 </body>
