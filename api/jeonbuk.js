@@ -33,6 +33,7 @@ export default async function handler(req, res) {
       const sex=g?.PBAN_EXCP_YN==='N' && Number.isInteger(male) && male>=0 && Number.isInteger(female) && female>=0 && male+female===g.SUM ? {male,female} : null;
       const stock=stockByCode.get(s.SCHUL_CODE), use=useByCode.get(s.SCHUL_CODE), after=afterByCode.get(s.SCHUL_CODE);
       const valid=(v)=>typeof v==='number' && Number.isFinite(v) && v>=0;
+      const gradeClasses=m?.PBAN_EXCP_YN==='N'&&[m.COL_1,m.COL_2,m.COL_3].every(valid)?[m.COL_1,m.COL_2,m.COL_3]:null;
       const club=clubsByCode.get(s.SCHUL_CODE);
       const clubCounts=club?.PBAN_EXCP_YN==='N'&&valid(club.CREAT_EXPER_ACT_CCCLU_FGR)&&valid(club.STDNT_SLCTL_CCCLU_FGR)?{curricular:club.CREAT_EXPER_ACT_CCCLU_FGR,studentLed:club.STDNT_SLCTL_CCCLU_FGR}:null;
       const feature=featuresByCode.get(s.SCHUL_CODE);
@@ -40,7 +41,7 @@ export default async function handler(req, res) {
       const specialPrograms=feature?.PBAN_EXCP_YN==='N'?{classroom:flag(feature.CURR_CCCLA_SYST_YN),autonomousSchool:flag(feature.SLCTL_SCHUL_YN),levelBased:flag(feature.LEVEL_ACCTO_MVMN_ITRT_OPRTN_YN)}:null;
       const library={stockPerStudent:stock?.PBAN_EXCP_YN==='N'&&valid(stock.RATIO)?stock.RATIO:null,loansPerStudent:use?.PBAN_EXCP_YN==='N'&&valid(use.DATA1)?use.DATA1:null};
       const afterSchool=after?.PBAN_EXCP_YN==='N'&&[after.ASL_CURR_PGM_FGR,after.ASL_CURR_REG_STDNT_FGR,after.ASL_SPABL_APTD_PGM_FGR,after.ASL_SPABL_APTD_REG_STDNT_FGR].every(valid)?{currPrograms:after.ASL_CURR_PGM_FGR,currEnrollments:after.ASL_CURR_REG_STDNT_FGR,aptitudePrograms:after.ASL_SPABL_APTD_PGM_FGR,aptitudeEnrollments:after.ASL_SPABL_APTD_REG_STDNT_FGR}:null;
-      return { code:s.SCHUL_CODE, uuid:s.SHL_IDF_CD, schoolKind:s.HS_KND_SC_NM, name:s.SCHUL_NM, address:s.SCHUL_RDNMA, founder:s.FOND_SC_CODE, gender:s.COEDU_SC_CODE, students:m?number(m.COL_FGR_SUM):null, classes:m?number(m.COL_SUM):null, sex,library,afterSchool,clubCounts,specialPrograms };
+      return { code:s.SCHUL_CODE, uuid:s.SHL_IDF_CD, schoolKind:s.HS_KND_SC_NM, name:s.SCHUL_NM, address:s.SCHUL_RDNMA, founder:s.FOND_SC_CODE, gender:s.COEDU_SC_CODE, students:m?number(m.COL_FGR_SUM):null, classes:m?number(m.COL_SUM):null, gradeClasses, sex,library,afterSchool,clubCounts,specialPrograms };
     });
     res.setHeader('Cache-Control','public, s-maxage=3600, stale-while-revalidate=300');
     return res.status(200).json({schools,year,queriedAt:new Date().toISOString()});
