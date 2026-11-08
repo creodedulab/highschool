@@ -26,7 +26,7 @@ export default async function handler(req, res) {
       const number = value => { const match=/^(\d+)(?:\((\d+)\))?$/.exec(String(value??'').trim()); return match ? {value:Number(match[1]),raw:match[0]} : null; };
       const g=genderByCode.get(s.SCHUL_CODE), male=g?.COL_MSUM, female=g?.COL_WSUM;
       const sex=g?.PBAN_EXCP_YN==='N' && Number.isInteger(male) && male>=0 && Number.isInteger(female) && female>=0 && male+female===g.SUM ? {male,female} : null;
-      return { code:s.SCHUL_CODE, name:s.SCHUL_NM, address:s.SCHUL_RDNMA, founder:s.FOND_SC_CODE, gender:s.COEDU_SC_CODE, students:m?number(m.COL_FGR_SUM):null, classes:m?number(m.COL_SUM):null, sex };
+      return { code:s.SCHUL_CODE, uuid:s.SHL_IDF_CD, name:s.SCHUL_NM, address:s.SCHUL_RDNMA, founder:s.FOND_SC_CODE, gender:s.COEDU_SC_CODE, students:m?number(m.COL_FGR_SUM):null, classes:m?number(m.COL_SUM):null, sex };
     });
     res.setHeader('Cache-Control','public, s-maxage=3600, stale-while-revalidate=300');
     return res.status(200).json({schools,year,queriedAt:new Date().toISOString()});
