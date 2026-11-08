@@ -37,13 +37,13 @@
 .qual-list span{font-size:12px;padding:5px 9px;background:#edf4ff;border-radius:7px;color:#29578e}
 @media(max-width:570px){.program-check-grid{grid-template-columns:1fr}.resource-actions .site-link{width:100%}}
 
-.sex-chart{max-width:360px;margin-top:10px}.sex-bar{display:flex;height:10px;border-radius:8px;overflow:hidden;background:#eef1f5}.sex-bar span{background:#4382dc}.sex-bar i{background:#df8eac}.sex-label{display:flex;justify-content:space-between;gap:12px;color:#60758d;font-size:11px;margin-top:6px}.sex-chart small,.sex-missing{color:#8194a5;font-size:11px}.sex-missing{margin-top:5px}</style>
+.sex-chart{max-width:360px;margin-top:10px}.sex-bar{display:flex;height:10px;border-radius:8px;overflow:hidden;background:#eef1f5}.sex-bar span{background:#4382dc}.sex-bar i{background:#df8eac}.sex-label{display:flex;justify-content:space-between;gap:12px;color:#60758d;font-size:11px;margin-top:6px}.sex-chart small,.sex-missing{color:#8194a5;font-size:11px}.sex-missing{margin-top:5px}.brand{border:0;background:transparent;width:100%;text-align:left;cursor:pointer;font:inherit}.brand strong{font-size:13px;line-height:1.35;letter-spacing:.5px}.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>
 </head>
 <body>
 <div class="menu-overlay" id="menu-overlay"></div>
 <div class="app">
   <aside class="aside" id="aside">
-    <div class="brand"><div class="brand-mark">JB</div><div><strong>전북 고교 인사이트</strong><span>JEONBUK HIGH INSIGHT</span></div></div><a href="../index.html" style="display:block;margin:0 10px 12px;color:#b7d9ed;font-size:12px">← 전국 지도 돌아가기</a>
+    <button type="button" class="brand" data-view="dashboard" aria-label="전북 고교 인사이트 첫 페이지"><div class="brand-mark" aria-hidden="true">JB</div><strong>JEONBUK<br>HIGH INSIGHT</strong></button><a href="../index.html" style="display:block;margin:0 10px 12px;color:#b7d9ed;font-size:12px">← 전국 지도 돌아가기</a>
     <div class="nav-label">EXPLORE</div>
     <nav aria-label="주요 메뉴">
       <button type="button" class="nav-item active" data-view="dashboard"><span class="nav-ico">▦</span>종합 대시보드</button>
@@ -54,7 +54,7 @@
     </nav>
   </aside>
   <div class="main-shell">
-    <header class="topbar"><div style="display:flex;align-items:center;gap:12px"><button type="button" class="mobile-menu" id="mobile-menu" aria-label="메뉴 열기">☰</button><div><div class="eyebrow">JEONBUK EDUCATION DATA</div><div style="font-size:11px;color:#7a90a9">전북특별자치도 고등학교 통합 탐색 플랫폼</div></div></div><div class="top-right"><span id="live-status" class="top-pill" role="status">저장된 자료 표시</span><span class="top-pill">자료 제작 2026.11.08</span></div></header>
+    <header class="topbar"><div style="display:flex;align-items:center;gap:12px"><button type="button" class="mobile-menu" id="mobile-menu" aria-label="메뉴 열기">☰</button><div><div class="eyebrow">JEONBUK EDUCATION DATA</div><div style="font-size:11px;color:#7a90a9">전북특별자치도 고등학교 통합 탐색 플랫폼</div></div></div><span id="live-status" role="status" class="visually-hidden">저장된 자료 표시</span></header>
     <main class="content" id="main-content" tabindex="-1" aria-live="polite"></main>
   </div>
 </div>
